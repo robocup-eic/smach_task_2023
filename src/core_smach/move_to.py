@@ -13,9 +13,8 @@ from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 import actionlib
 from actionlib_msgs.msg import *
 from tf.transformations import quaternion_from_euler
-from geometry_msgs.msg import Pose, Point, Quaternion
+from geometry_msgs.msg import Pose, Point, Quaternion,Twist
 from navigate_SEX import Navi_SEX
-
 
 def print_available_userdata(userdata):
     print(userdata)
@@ -40,31 +39,37 @@ class MoveTo(smach.State):
                  timeout_tries: int = 0, # 0 means infinite tries
                  target: str = None
                  ):
+        """ 
+        Assumption: only one object in the arena every object is unique
+        MoveTo: fridge 
+          """
+        
+        # Init smach
+        smach.State.__init__(self,
+                                outcomes=['out1','out0'],
+                            #  outcomes=['out1','out2','loop','undo','timeout'],
+                             input_keys=['room','furniture','data3'],
+                             output_keys=['data1','data3'])
+        rospy.init_node('nav_test', anonymous=False)
+        rospy.on_shutdown(self.shutdown)
+        
+        # Variable and Constants
+        FILE_PATH =  ".yaml"
+
+
         # Raise exceptions if any entity parameter is not of type bool
         if not isinstance(log, bool):
             raise ValueError("Argument 'log' must be of type bool")
         if target is None:
             raise ValueError("Argument 'target_pose' must not be None")
 
-        rospy.init_node('nav_test', anonymous=False)
-        rospy.on_shutdown(self.shutdown)
-        #tell the action client that we want to spin a thread by default
-        self.move_base = actionlib.SimpleActionClient("move_base",
-                                                      MoveBaseAction)
-        '''
-        LOOK AT LATER
-        move_base_simple/goal (geometry_msgs/PoseStamped)
-        Provides a non-action interface to move_base for users that don't care about tracking the execution status of their goals.
-        '''
-        rospy.loginfo("wait for the action server to come up")
+
+        # action client for move_base
+        self.move_base = actionlib.SimpleActionClient("move_base", MoveBaseAction)
+        
         #allow up to 5 seconds for the action server to come up
+        rospy.loginfo("wait for the action server to come up")
         self.move_base.wait_for_server(rospy.Duration(5))
-        # Initialize the state
-        smach.State.__init__(self,
-                                outcomes=['out1','out0'],
-                            #  outcomes=['out1','out2','loop','undo','timeout'],
-                             input_keys=['room','furniture','data3'],
-                             output_keys=['data1','data3'])
 
         # timout configuration, (don't change)
         if timeout_tries == 0:
@@ -73,32 +78,53 @@ class MoveTo(smach.State):
             self.timeout_bool = True
         self.tries_counter = int(0) # counter for the number of tries
         self.timeout_tries = timeout_tries
-        sex = Navi_SEX()
-        self.target_pose = sex.read_yaml(target)
+        
+        # Create instance of SEX to read the yaml for pose extraction
+        sex = Navi_SEX(FILE_PATH)
+
+        # get the Pose of the target location from SEX
+        self.target_pose : Pose = sex.read_yaml(target)
 
     def execute(self, userdata):
         if self.target is None:
             rospy.logerr("Target not found")
             return 'out0'
+        
+        # A goal to be sent to the MoveBase action server.
         goal = MoveBaseGoal()
+        # Reference frame
         goal.target_pose.header.frame_id = 'map'
+        # header file 
         goal.target_pose.header.stamp = rospy.get_rostime()
+        # take the extracted pose into 
         goal.target_pose.pose = self.target_pose
+
+        # send goal to to movebase similar to post 
         self.move_base.send_goal(goal)
-        print("Waiting for result")
+        rospy.loginfo("(MoveTo): Waiting for response from MoveBase")
+
+        # maximum time to wait for the robot to reach the goal, returns true if it reaches the goal
+        # returns false if it doesn't reach the goal
         success = self.move_base.wait_for_result(rospy.Duration(60))
-        print("Return result: ", success)
+
+        rospy.loginfo(f"(MoveTo): Result from MoveBase | {success}")
+
+        # returns GoalStatus type of PENDING, ACTIVE, PREEMPTED, SUCCEEDED, ABORTED, REJECTED, PREEMPTING, and RECALLING.
         state = self.move_base.get_state()
-        result = False
-        if success and state == GoalStatus.SUCCEEDED:
+
+        # safety procedure to stop the robot if it doesn't reach the goal
+        self.shutdown()
+        if success and state == actionlib.GoalStatus.SUCCEEDED:
             # We made it!
-            result = True
+            return 'out1'
         else:
+            # Cancel the goal if takes too long
             self.move_base.cancel_goal()
-            self.goal_sent = False
-        return result
+            return 'out0'
+        
+
 
     def shutdown(self):
         stop_goal = MoveBaseGoal()
         self.move_base.send_goal(stop_goal)
-        rospy.loginfo("Stop")
+        rospy.loginfo("(MoveTo) Stopping...")

@@ -18,6 +18,7 @@ from core_smach.person import Person
 from core_nlp.utils import (WakeWord, Speak, GetIntent, GetName, GetObject, GetLocation,)
 from core_smach.move_to import MoveTo
 from core_cv.image_captioning import ImageCaption
+from core_cv.face_recognition import RegisterFace
 from cv_connector.srv import CV_srv, CV_srvRequest
 from cv_connector.msg import CV_type
 
@@ -114,7 +115,7 @@ class IntroducePeople(smach.State):
                     #    userdata, 
                        continous: bool = True ):
         """ 
-        ## To Run 
+        To Run 
             1. rosrun cv_connector CV_connector.py
             2. cv_main.py must be running 
             3. roslaunch zed_wrapper zed2i.launch
@@ -131,6 +132,7 @@ class IntroducePeople(smach.State):
                             
                             return value["center"]
                     return None
+                    
         def find_by_closest_distance_center(data):
                     """ 
                     Return [X, Y]
@@ -138,7 +140,7 @@ class IntroducePeople(smach.State):
                     x = [757,380]
 
                     """
-                    sorted_data = dict(sorted(detection_list.items(), key=lambda item: item[1]['area'], reverse=True))
+                    sorted_data = dict(sorted(data.items(), key=lambda item: item[1]['area'], reverse=True))
                     if self.response_debug:
                         rospy.loginfo("sorted_data: ")
                         printclr(json.dumps(sorted_data, indent=4),"blue")
@@ -146,6 +148,7 @@ class IntroducePeople(smach.State):
                             # print(value)
                             return value["center"]
                     return None
+
         def center_robot_to_user(
                         detection_center_x: int,
                         X1_boundary: int,
@@ -290,28 +293,30 @@ class IntroducePeople(smach.State):
         # Log the execution stage
         rospy.loginfo(f'(IntroducePeople): Executing..')
 
-
-        # Extract people from userdata
+        # Extract person to be described from userdata
         person : Person = userdata.people_list[self.index]
+
+        # mask output from CV
         age_txt = f' {person.age}'
         if person.age == 'young':
             age_txt = 'younger than 20'
         elif person.age == 'elderly':
             age_txt = 'older than 60'
         
-        
+        # get name of person being introduced to, turn the robot until they are in the center of the frame
         if self.introduce_to is not None:
             introduce_to_txt = f"Hey {userdata['people_list'][self.introduce_to].name}, "
             self.person_name_to_track = userdata['people_list'][self.introduce_to].name
             self.person_tracker(continous=False)
             nlp_client.speak(text=introduce_to_txt)
 
-        #turn to the person to be introduced to to indicate their name
+        # turn to the person to be introduced to to indicate their name
         self.person_name_to_track = userdata['people_list'][person].name 
         self.person_tracker(continous=False)
         nlp_client.speak(text=f"this is {person.name}")
 
-        #turn back to person being introduced to
+
+        # start tracking the person being introduced to, use a thread to maintain eye contact throughout the introduction
         self.person_name_to_track = userdata['people_list'][self.introduce_to].name
         listener_tracker = threading.Thread(
                     target=self.person_tracker, kwargs={'continous': True})
@@ -406,7 +411,7 @@ def main():
                             Speak(text="""Greetings, May I have your name please?"""),
                             closet_person_to_track = True,
                             # Speak(text="Please ."),
-                            transitions={'out1': 'GET_NAME',
+                            transitions={'out1': 'GET_NAME_1',
                                             'out0': 'out0'})
         
         #  person_name_to_track = None,
@@ -417,7 +422,7 @@ def main():
         #                        MoveTo(),
         #                         transitions={'out1': 'GET_NAME'})
                                
-        smach.StateMachine.add('GET_NAME',
+        smach.StateMachine.add('GET_NAME_1',
                             GetName(speak_debug=speak_debug,
                                     response_debug=response_debug,
                                     timeout=timeout),
@@ -430,11 +435,11 @@ def main():
                             keys=["name"],
                             closet_person_to_track = True,),
                             
-                            transitions={'out1': 'GET_OBJECT',
+                            transitions={'out1': 'GET_OBJECT_1',
                                     'out0': 'out0'},
                             remapping={'name': 'name'})
 
-        smach.StateMachine.add('GET_OBJECT',
+        smach.StateMachine.add('GET_OBJECT_1',
                             GetObject(speak_debug=speak_debug,
                                         response_debug=response_debug,
                                         timeout=timeout),
@@ -450,7 +455,7 @@ def main():
                             transitions={'out1': 'IMAGE_CAPTION',
                                         'out0': 'out0'})
         
-        smach.StateMachine.add('IMAGE_CAPTION',
+        smach.StateMachine.add('IMAGE_CAPTION_1',
                                ImageCaption(),
                                remapping = {'age':'age',
                                             'shirt_color':'shirt_color',
@@ -458,12 +463,17 @@ def main():
                                             'gender':'gender',
                                             'race':'race',
                                             'wearing_glasses':'wearing_glasses'},
-                                transitions={'out1': 'ADD_PERSON',
+                                transitions={'out1': 'REGISTER_FACE_1',
                                              'undo':'out0'})
+        
+        smach.StateMachine.add('REGISTER_FACE_1',
+                               RegisterFace(),
+                               remapping={'name':'name'},
+                               transitions={'out1': 'ADD_PERSON'})
                                                 
         smach.StateMachine.add('ADD_PERSON', # add person to list [0,X,0]
                                 AddPerson(),
-                                transitions={'out1': 'TURN_TO_COUCH', 
+                                transitions={'out1': 'SIT_TIGHT', 
                                              'out0': 'out0'},
                                 remapping={"age":"age",
                                         "hair_color":"hair_color",
@@ -473,10 +483,10 @@ def main():
                                         "people_list":"people_list",
                                         'people_index':'people_index'}
                                 )
-        
-        smach.StateMachine.add('TURN_TO_COUCH',
-                                 MoveTo(),
-                                  transitions={'out1': 'SIT_TIGHT'})
+        # move to the couch 
+        # smach.StateMachine.add('TURN_TO_COUCH',
+        #                          MoveTo(),
+        #                           transitions={'out1': 'SIT_TIGHT'})
         
         smach.StateMachine.add('SIT_TIGHT',
                                Speak(text="Please have a seat.      I am going to introduce you to our host",
@@ -546,13 +556,17 @@ def main():
                                             'gender':'gender',
                                             'race':'race',
                                             'wearing_glasses':'wearing_glasses'},
-                                transitions={'out1': 'ADD_PERSON_2',
+                                transitions={'out1': 'REGISTER_FACE_2',
                                              'undo':'out0' })
-                                                
+
+        smach.StateMachine.add('REGISTER_FACE_2',
+                               RegisterFace(),
+                               remapping={'name':'name'},
+                               transitions={'out1': 'ADD_PERSON_2'})        
 
         smach.StateMachine.add('ADD_PERSON_2',
                                 AddPerson(),
-                                transitions={'out1': 'TURN_TO_COUCH_2', 
+                                transitions={'out1': 'SIT_TIGHT_2', 
                                              'out0': 'out0'},
                                 remapping={"age":"age",
                                         "hair_color":"hair_color",
@@ -563,9 +577,9 @@ def main():
                                         'people_index':'people_index'}
                                 )
 
-        smach.StateMachine.add('TURN_TO_COUCH_2',
-                                    MoveTo(),
-                                    transitions={'out1': 'SIT_TIGHT_2'})
+        # smach.StateMachine.add('TURN_TO_COUCH_2',
+        #                             MoveTo(),
+        #                             transitions={'out1': 'SIT_TIGHT_2'})
             
         smach.StateMachine.add('SIT_TIGHT_2',
                                 Speak(text="Please have a seat.     I am going to introduce you to our host"),
@@ -573,7 +587,7 @@ def main():
 
         smach.StateMachine.add('INTRODUCE_HOST_2',
                                IntroducePeople(people_index=0,introduce_to=2),
-                               transitions = {'out1': 'TURN_TO_HOST_2'})
+                               transitions = {'out1': 'INTRODUCE_PERSON_2'})
 
         # smach.StateMachine.add('TURN_TO_HOST_2',
         #                          MoveTo(),
@@ -583,18 +597,19 @@ def main():
         # TODO Speak to host
         smach.StateMachine.add('INTRODUCE_PERSON_2',
                                IntroducePeople(people_index=2,introduce_to=0),
-                               transitions = {'out1': 'TURN_TO_PERSON_TWO_2'})
+                               transitions = {'out1': 'SPEAK_INTRODUCE_TO_EACH_OTHER'})
         
 
-        #------------------------Introduct Each Other-------------------------------------------
+        #------------------------Introduce Each Other-------------------------------------------
 
         #TODO Speak to person2
-        smach.StateMachine.add('TURN_TO_PERSON_TWO_2',
-                               MoveTo(),
-                                transitions={'out1': 'SPEAK_INTRODUCE_TO_EACH_OTHER'})
+        # smach.StateMachine.add('TURN_TO_PERSON_TWO_2',
+        #                        MoveTo(),
+        #                         transitions={'out1': 'SPEAK_INTRODUCE_TO_EACH_OTHER'})
 
         smach.StateMachine.add('SPEAK_INTRODUCE_TO_EACH_OTHER',
-                               Speak(text="Cool! now I am going to introduce you to each other "),
+                               Speak(text="Cool! now I am going to introduce you to each other ",
+                                     closet_person_to_track=True),
                                transitions = {'out1': 'INTRODUCE_TO_EACH_OTHER_1'})
         
         smach.StateMachine.add('INTRODUCE_TO_EACH_OTHER_1',

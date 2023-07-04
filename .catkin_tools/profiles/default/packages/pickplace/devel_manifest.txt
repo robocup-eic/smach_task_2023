@@ -1,0 +1,6 @@
+core_manipulation/pickplace
+/home/walkie/smach_task_2023/devel/.private/pickplace/cmake.lock /home/walkie/smach_task_2023/devel/./cmake.lock
+/home/walkie/smach_task_2023/devel/.private/pickplace/share/pickplace/cmake/pickplaceConfig-version.cmake /home/walkie/smach_task_2023/devel/share/pickplace/cmake/pickplaceConfig-version.cmake
+/home/walkie/smach_task_2023/devel/.private/pickplace/share/pickplace/cmake/pickplaceConfig.cmake /home/walkie/smach_task_2023/devel/share/pickplace/cmake/pickplaceConfig.cmake
+/home/walkie/smach_task_2023/devel/.private/pickplace/lib/python3/dist-packages/pickplace/__init__.py /home/walkie/smach_task_2023/devel/lib/python3/dist-packages/pickplace/__init__.py
+/home/walkie/smach_task_2023/devel/.private/pickplace/lib/pkgconfig/pickplace.pc /home/walkie/smach_task_2023/devel/lib/pkgconfig/pickplace.pc
