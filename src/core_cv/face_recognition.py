@@ -56,7 +56,7 @@ import time
 import json
 import ast
 sys.path.append("smach_task_2023/core_nlp/") # specific to cv folder
-from emerStop import EmergencyStop, StopEnd
+# from emerStop import EmergencyStop, StopEnd
 
 from geometry_msgs.msg import Twist, Vector3
 from rospy import Publisher, Rate
@@ -91,7 +91,7 @@ class RegisterFace(smach.State):
         
         # Initialize the state
         smach.State.__init__(self, 
-                             outcomes=['out1','undo'],
+                             outcomes=['out1'],
                             #  outcomes=['out1','out2','loop','undo','timeout'],
                              input_keys=['name'],
                              output_keys=['name'])

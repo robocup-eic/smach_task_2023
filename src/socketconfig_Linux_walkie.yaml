@@ -54,6 +54,10 @@ processes:
     exec_dir: "/home/walkie/cv/robocup2023-face-recognition/"
     exec_cmd: "python3 main.py"
     port: 12304
+  nlp_tts_mimic3:
+    conda_env: "nlp"
+    exec_dir: "/home/walkie/Robocup-2023-NLP/"
+    exec_cmd: "mimic3-server --preload-voice en_US/vctk_low"
 
   #* order from longest to setup to least
 states:
@@ -84,21 +88,22 @@ states:
     - nlp_rasa2
     - nlp_wakeword
     - nlp_tts
-    - nlp_respeaker
+    - nlp_tts_mimic3
+    # - nlp_respeaker
   nlprasa:
     # - asr_cpus
     - nlp_rasa1
     - nlp_rasa2
-    - nlp_respeaker
+    # - nlp_respeaker
   nlpasr:
     # - asr_cpu
-    - nlp_AOn-asr
+    # - nlp_AOn-asr
     - nlp_asr
     # - wakeword
     - nlp_tts
-    - nlp_respeaker
+    # - nlp_respeaker
   nlpww*tts:
 
     - nlp_wakeword
     - nlp_tts
-    - nlp_respeaker
+    # - nlp_respeaker

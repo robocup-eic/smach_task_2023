@@ -6,7 +6,8 @@ import time
 import os
 import smach
 from ratfin import *
-from utils import Speak
+import simpleaudio as sa  
+# from utils import Speak
 
 # Task specific state
 class StopEnd(smach.State):
@@ -40,6 +41,11 @@ class EmergencyStop():
     def execute(self):
         print('(EmergencyStop): Listening for Walkie Freeze')
         if nlp_client.ww_listen(text="walkie_freeze", log=True):
+            wave_obj = sa.WaveObject.from_wave_file("/home/walkie/smach_task_2023/src/core_nlp/GTA5_Failed.mp3")
+            play_obj = wave_obj.play()
+            # nlp_client.speak('fuck fuck fuck fuck fuck stopping!')
+            nlp_client.speak('god damn it fuck.')
+            #play GTA_Failed.mp3 using sa
             self.stop_flag = True
         
         print('EmergencyStop detected')

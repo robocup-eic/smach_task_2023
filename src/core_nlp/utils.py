@@ -298,7 +298,7 @@ class Speak(smach.State):
             rospy.loginfo(f'Speaking : {text}')
 
             # speak the intent
-            speak(text)
+            speak(text,online=False)
 
             self.stop_tracking = True
     
@@ -635,6 +635,7 @@ class GetName(smach.State):
             return "out1"
         except Exception as e:
             printclr(e, "red")
+            self.timeout = 0
             return "out0"
 
 
@@ -729,6 +730,7 @@ class GetObject(smach.State):
             return "out1"
         except Exception as e:
             printclr(e, "red")
+            self.timeout = 0
             return "out0"
 
 

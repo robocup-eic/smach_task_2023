@@ -12,14 +12,16 @@ import math
 from tf.transformations import euler_from_quaternion, quaternion_from_euler
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 import smach
-from nlp_client import ww_listen
+from nlp_client import ww_listen, speak
 from threading import Thread
 
+
 class Follow_Person(smach.State):
-    def __init__(self,target_name:str = 'target', timeout_seconds : int = 10 ):
+    def __init__(self,target_name:str = 'target', timeout_seconds : int = 10 , send_goal_rate : int = 10):
         self.target_name = target_name
         self.timeout_seconds = timeout_seconds
         self.reached_destination = False
+        self.send_goal_rate = send_goal_rate
         smach.State.__init__(self, outcomes=['out1', 'out2'])
 
     def execute(self, userdata):
@@ -31,77 +33,85 @@ class Follow_Person(smach.State):
         self.reached_destination = True
 
     def follow_person(self):
-        # client for CV services
-        rospy.loginfo('(FollowPerson) Waiting for CV service')
-        cv_client = rospy.ServiceProxy('/CV_connect/req_cv', CV_srv)
-        rospy.wait_for_service('/CV_connect/req_cv')
+        try:
+            # client for CV services
+            rospy.loginfo('(FollowPerson) Waiting for CV service')
 
-        # client for sending goals to move_base
-        move_base_client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
-        rate = rospy.Rate(5)
-        
-        rospy.loginfo('(FollowPerson) Registering person')
-        req = CV_srvRequest()
-        req.cv_type.type = CV_type.TargetTracker_Register
-        # req.req_info = self.target_name # name of person to follow
-        response = cv_client(req)
-        
-        while response.result == "No person detect":
-            rospy.loginfo("No person register, try again")
+            cv_client = rospy.ServiceProxy('/CV_connect/req_cv', CV_srv)
+            rospy.wait_for_service('/CV_connect/req_cv')
+
+            # client for sending goals to move_base
+            move_base_client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
+            
+            rate = rospy.Rate(self.send_goal_rate) # send goal every 1 second
+            
+            rospy.loginfo('(FollowPerson) Registering person')
             req = CV_srvRequest()
             req.cv_type.type = CV_type.TargetTracker_Register
             # req.req_info = self.target_name # name of person to follow
             response = cv_client(req)
-        
-        # will be used to compute values from the camera
-        s = cv_computer()
-        rospy.wait_for_service('/CV_connect/req_cv')
-        
-        #create a thread to check if the robot has reached the destination
-        are_we_there_yet_bitch = Thread(target=self.check_reach_destination)
-        rospy.loginfo('(FollowPerson) Waiting for WakeWord to stop')
-        are_we_there_yet_bitch.start()
+            
+            while response.result == "No person detect":
+                rospy.loginfo("No person register, try again")
+                req = CV_srvRequest()
+                req.cv_type.type = CV_type.TargetTracker_Register
+                # req.req_info = self.target_name # name of person to follow
+                response = cv_client(req)
+            
+            # will be used to compute values from the camera
+            s = cv_computer()
+            rospy.wait_for_service('/CV_connect/req_cv')
+            
+            #create a thread to check if the robot has reached the destination
+            are_we_there_yet_bitch = Thread(target=self.check_reach_destination)
+            rospy.loginfo('(FollowPerson) Waiting for WakeWord to stop')
+            are_we_there_yet_bitch.start()
 
-        while not rospy.is_shutdown() and not self.reached_destination:
-            # will return xyz coordinates relative to the robot for the target - default param is target = 'target'
-            human_pos = s.xyz_target()
-            # rospy.loginfo('(FollowPerson) Detected person')
-            while human_pos == None: # human not detected
-                rospy.loginfo('(FollowPerson) Cannot detect anyone')
-                timeout_count = 0
-                if timeout_count > self.timeout_seconds/(1/5): # means that person has not been detected for longer than wanted
-                    return 'out2' # person missing, transition to find person
+            speak('Please try to stay in my sight so that I can follow you all the way')
+            while not rospy.is_shutdown() and not self.reached_destination:
+                # will return xyz coordinates relative to the robot for the target - default param is target = 'target'
                 human_pos = s.xyz_target()
-                timeout_count +=1
-                rate.sleep()    
+                # rospy.loginfo('(FollowPerson) Detected person')
+                timeout_count = 0
+                while human_pos == None: # human not detected
+                    rospy.loginfo('(FollowPerson) Cannot detect anyone')
+                    if timeout_count > self.timeout_seconds/(1/self.send_goal_rate): # means that person has not been detected for longer than wanted
+                        return 'out2' # person missing, transition to find person
+                    human_pos = s.xyz_target()
+                    timeout_count +=1
+                    rate.sleep()    
 
-            if math.isnan(human_pos[0]) or math.isnan(human_pos[1]) or math.isnan(human_pos[2]):
-                continue
-            else:
-                print(type(human_pos[0]),human_pos[0])
-                #create a Pose object relative to the base_link frame to be sent to move_base
-                pose_stamped = Pose()
-                pose_stamped.position.x = human_pos[0]
-                pose_stamped.position.y = human_pos[1]
+                if math.isnan(human_pos[0]) or math.isnan(human_pos[1]) or math.isnan(human_pos[2]):
+                    print(human_pos)
+                    continue
+                else:
+                    print(type(human_pos[0]),human_pos[0])
+                    #create a Pose object relative to the base_link frame to be sent to move_base
+                    pose_stamped = Pose()
+                    pose_stamped.position.x = human_pos[0] - 0.3
+                    pose_stamped.position.y = human_pos[1]
 
-                yaw = math.atan2(human_pos[1], human_pos[0])
-                quarternion_orientation = quaternion_from_euler(0, 0, yaw)
-                pose_stamped.orientation.x = quarternion_orientation[0]
-                pose_stamped.orientation.y = quarternion_orientation[1]
-                pose_stamped.orientation.z = quarternion_orientation[2]
-                pose_stamped.orientation.w = quarternion_orientation[3]
-                s.pub_marker(human_pos[0], human_pos[1], human_pos[2], "base_link")
+                    yaw = math.atan2(human_pos[1], human_pos[0])
+                    quarternion_orientation = quaternion_from_euler(0, 0, yaw)
+                    pose_stamped.orientation.x = quarternion_orientation[0]
+                    pose_stamped.orientation.y = quarternion_orientation[1]
+                    pose_stamped.orientation.z = quarternion_orientation[2]
+                    pose_stamped.orientation.w = quarternion_orientation[3]
+                    output = transform_pose(pose_stamped,"zed2i_base_link","map")
+                    # s.pub_marker(human_pos[0], human_pos[1], human_pos[2], "map")
 
-                move_base_client.wait_for_server()
+                    move_base_client.wait_for_server()
 
-                goal = MoveBaseGoal()
-                goal.target_pose.header.frame_id = "base_link"
-                goal.target_pose.header.stamp = rospy.Time.now()
-                goal.target_pose.pose = pose_stamped
+                    goal = MoveBaseGoal()
+                    goal.target_pose.header.frame_id = "map"
+                    goal.target_pose.header.stamp = rospy.Time.now()
+                    goal.target_pose.pose = output.pose
 
-                move_base_client.send_goal(goal)
+                    move_base_client.send_goal(goal)
 
-            rate.sleep()
+                rate.sleep()
+        except rospy.ROSInterruptException:
+            are_we_there_yet_bitch.join()
         are_we_there_yet_bitch.join()
         return 'out1'
     
@@ -115,7 +125,7 @@ def main():
 
     with sm:
         smach.StateMachine.add('FOLLOW_ME', 
-                                Follow_Person(),
+                                Follow_Person(timeout_seconds=5,send_goal_rate=1),
                                 transitions={'out1':'out1',
                                              'out2':'out0'})
     sm.execute()

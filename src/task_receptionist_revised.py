@@ -16,11 +16,13 @@ from rospy import Publisher, Rate
 
 from core_smach.person import Person
 from core_nlp.utils import (WakeWord, Speak, GetIntent, GetName, GetObject, GetLocation,)
-from core_smach.move_to import MoveTo
+# from core_smach.move_to import MoveTo
 from core_cv.image_captioning import ImageCaption
 from core_cv.face_recognition import RegisterFace
 from cv_connector.srv import CV_srv, CV_srvRequest
 from cv_connector.msg import CV_type
+from move_base_msgs.msg import *
+import actionlib
 
 
 
@@ -51,11 +53,135 @@ from cv_connector.msg import CV_type
 22 Say "Please take a sit on the couch, This is our host "Game" his the in the middle of the couch, his favorite drink is "Coke". Person1 name this is Person2 etc....
 
 """
+class a_wild_guest_appear(smach.State):
+    def __init__(self):
+        smach.State.__init__(self,
+                             outcomes=['out0'])
+        
+    def execute(self, userdata):
+        # Log the execution stage
+        rospy.loginfo('find geust')
 
+        cv_client = rospy.ServiceProxy('/CV_connect/req_cv', CV_srv)
+        rospy.wait_for_service('/CV_connect/req_cv')
+        req = CV_srvRequest()
+        req.cv_type.type = CV_type.HumanPoseEstimation
+        go = False
+
+        while not rospy.is_shutdown():
+            res = cv_client.call(req)
+
+            print(res.result)
+
+            dict = ast.literal_eval(res.result)['res']
+            print(dict)
+            for id, info in dict.items():
+                if info['is_inside']== True:
+                    go = True
+            
+            if go:
+                break
+                
+        return "out0"
+
+class GoBack(smach.State):
+    def __init__(self):
+        smach.State.__init__(self,outcomes=['out1','out0'],input_keys=['listen_intent'])
+
+    def execute(self, ud):
+        return self.exit_arena()
+    
+    def exit_arena(self):
+        move_base_client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
+        
+        move_base_client.wait_for_server()
+
+        goal = MoveBaseGoal()
+        goal.target_pose.header.frame_id = "map"
+        goal.target_pose.header.stamp = rospy.Time.now()
+        goal.target_pose.pose.position.x = 0.5655
+        goal.target_pose.pose.position.y = -0.1611
+        goal.target_pose.pose.position.z = 0
+
+        goal.target_pose.pose.orientation.x = 0
+        goal.target_pose.pose.orientation.y = 0
+        goal.target_pose.pose.orientation.z = -0.999
+        goal.target_pose.pose.orientation.w = 0.022
+
+        move_base_client.send_goal(goal)
+        # move_base_client.wait_for_result()
+        return 'out1'
+    
+class GoTo(smach.State):
+    def __init__(self):
+        smach.State.__init__(self,outcomes=['out1'],input_keys=['listen_intent'])
+
+    def execute(self, ud):
+        return self.exit_arena()
+    
+    def exit_arena(self):
+        move_base_client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
+        
+        move_base_client.wait_for_server()
+
+        goal = MoveBaseGoal()
+        goal.target_pose.header.frame_id = "map"
+        goal.target_pose.header.stamp = rospy.Time.now()
+        goal.target_pose.pose.position.x = 1.995
+        goal.target_pose.pose.position.y = 0.997
+        goal.target_pose.pose.position.z = 0
+
+        goal.target_pose.pose.orientation.x = 0
+        goal.target_pose.pose.orientation.y = 0
+        goal.target_pose.pose.orientation.z = 0.7215
+        goal.target_pose.pose.orientation.w = 0.6923
+
+        move_base_client.send_goal(goal)
+        # move_base_client.wait_for_result()
+        return 'out1'
 
 
 
 # Task specific state
+class CheckForFreeSeats(smach.State):
+    def __init__(self):
+        smach.State.__init__(self,
+                            outcomes=['out1','out0'],
+                            output_keys=['free_seats'])
+
+    def execute(self, userdata):
+        rospy.loginfo(f'(CheckForFreeSeats): Executing..')
+        try:
+            # client for CV services
+            rospy.loginfo('(CheckForFreeSeats) Waiting for CV service')
+
+            cv_client = rospy.ServiceProxy('/CV_connect/req_cv', CV_srv)
+            rospy.wait_for_service('/CV_connect/req_cv')
+            req = CV_srvRequest()
+            req.cv_type.type = CV_type.VQA
+            questions = ['How many people are on the couch',
+                        'Is the left seat on the couch free',
+                        'Is the middle seat on the couch free',
+                        'Is the right seat on the couch free']
+            req.req_info = ','.join(questions)
+            response = cv_client(req)
+            num_seats = {'one':1,'two':2,'three':3}
+            data = ast.literal_eval(response.result)
+            num_free_seats = 3-num_seats[data[questions[0]]]
+            pos_seats = ['left','middle','right']
+            for i in range(1,4):
+                if data[questions[i]] != 'no':
+                    userdata.free_seats = pos_seats[i-1]
+                    return 'out1'
+            return 'out1'
+        except rospy.ServiceException as e:
+            rospy.loginfo(f'(FollowPerson) Service call failed: {e}')
+        except Exception as e:
+            userdata.free_seats = 'middle'
+        return 'out1'        
+
+
+
 class AddPerson(smach.State):
     def __init__(self):
         smach.State.__init__(self,
@@ -86,7 +212,6 @@ class AddPerson(smach.State):
 
         userdata.people_index += 1
         rospy.loginfo(f'(AddPerson): {p.name} added to people_list. {p.__dict__}')
-        
         return 'out1'
 
 # Task specific state
@@ -143,7 +268,7 @@ class IntroducePeople(smach.State):
                     sorted_data = dict(sorted(data.items(), key=lambda item: item[1]['area'], reverse=True))
                     if self.response_debug:
                         rospy.loginfo("sorted_data: ")
-                        printclr(json.dumps(sorted_data, indent=4),"blue")
+                        # printclr(json.dumps(sorted_data, indent=4),"blue")
                     for key, value in sorted_data.items():
                             # print(value)
                             return value["center"]
@@ -213,7 +338,7 @@ class IntroducePeople(smach.State):
         # ros log
         rospy.loginfo(f"(PersonTracker): person_name_to_track   = {self.person_name_to_track}")
         rospy.loginfo(f"(PersonTracker): closet_person_to_track = {self.closet_person_to_track}")
-
+        self.stop_tracking = False
 
         while not rospy.is_shutdown() and not self.stop_tracking :
             try:
@@ -311,10 +436,9 @@ class IntroducePeople(smach.State):
             nlp_client.speak(text=introduce_to_txt)
 
         # turn to the person to be introduced to to indicate their name
-        self.person_name_to_track = userdata['people_list'][person].name 
+        self.person_name_to_track = userdata['people_list'][self.index].name 
         self.person_tracker(continous=False)
         nlp_client.speak(text=f"this is {person.name}")
-
 
         # start tracking the person being introduced to, use a thread to maintain eye contact throughout the introduction
         self.person_name_to_track = userdata['people_list'][self.introduce_to].name
@@ -365,6 +489,15 @@ class IntroducePeople(smach.State):
 #             rospy.loginfo(f'(CheckPeople): Max Capacity')
 #             return "out0"
 
+class waitforenter(smach.State):
+    def __init__(self):
+        smach.State.__init__(self,outcomes=['out1'])
+
+    def execute(self, ud):
+        input()
+        rospy.sleep(5)
+        return 'out1'
+
 
 def main():
     speak_debug = False
@@ -386,33 +519,49 @@ def main():
     sm.userdata.age = 0
     sm.userdata.hair_color = ""
     sm.userdata.shirt_color = ""
-    sm.userdata.name = ""
+    sm.userdata.name = "John"
     sm.userdata.favorite_drink = ""
     sm.userdata.couch_location = [0,1,2]
     timeout = 3
 
-    host = Person(name="Game",
-                    favorite_drink="milkies from your mom's titties",
-                    # favorite_drink='human blood',
-                    age=20,
-                    shirt_color="brown",
-                    hair_color="black",
+    host = Person(name="John",
+                    favorite_drink="milk",
+                    age=40,
+                    shirt_color="orange",
+                    hair_color="blonde",
                     gender='male',
-                    race='Asian',
+                    race='European',
                     glasses=False)
+    
     sm.userdata.people_list.append(host)   
 
     with sm:
+        smach.StateMachine.add("REGISTER_HOST",
+                               RegisterFace(),
+                               transitions={'out1':'WAITFORENTER'},
+                               remapping={'name':'name'})
+        
+
+        smach.StateMachine.add('WAITFORENTER',
+                               waitforenter(),
+                               transitions={'out1':'CATCH_NEW_GUEST'})
+
+
         # TODO may have to do manual triggering of greeting
+        smach.StateMachine.add('CATCH_NEW_GUEST',
+                            a_wild_guest_appear(),
+                            transitions={'out0': 'GREETINGS_ASK_NAME'})
+        
         # TODO before registering a person might have to find a way for walkie to track that person
 
         #------------------------Person1-------------------------------------------
         smach.StateMachine.add('GREETINGS_ASK_NAME',
-                            Speak(text="""Greetings, May I have your name please?"""),
-                            closet_person_to_track = True,
+                            Speak(text="""Greetings, May I have your name please""",closet_person_to_track = True,),
                             # Speak(text="Please ."),
                             transitions={'out1': 'GET_NAME_1',
                                             'out0': 'out0'})
+        
+        
         
         #  person_name_to_track = None,
         #  closet_person_to_track = True,
@@ -427,11 +576,11 @@ def main():
                                     response_debug=response_debug,
                                     timeout=timeout),
                             transitions={'out1': 'SPEAK_ASK_OBJECT',
-                                            'out0': 'out0'},
+                                            'out0': 'GREETINGS_ASK_NAME'},
                             remapping={'listen_name': 'name'})
         
         smach.StateMachine.add('SPEAK_ASK_OBJECT',
-                            Speak(text="Hello {}, What's your favorite drink?",
+                            Speak(text="Hello {}, What's your favorite drink",
                             keys=["name"],
                             closet_person_to_track = True,),
                             
@@ -444,15 +593,15 @@ def main():
                                         response_debug=response_debug,
                                         timeout=timeout),
                             transitions={'out1': 'SPEAK_RESPOND_OBJECT',
-                                            'out0': 'out0'},
+                                            'out0': 'SPEAK_ASK_OBJECT'},
                             remapping={'listen_object': 'favorite_drink'})
         
         smach.StateMachine.add('SPEAK_RESPOND_OBJECT',
-                            Speak(text="oh!, I like {} too! Can you stay still for a second so I can memorize your details?",
+                            Speak(text="oh!, I like {} too! Can you stay still for a second so I can memorize your details",
                                 keys=["favorite_drink"],
                                 closet_person_to_track = True,),
                             remapping={'favorite_drink': 'favorite_drink'},
-                            transitions={'out1': 'IMAGE_CAPTION',
+                            transitions={'out1': 'IMAGE_CAPTION_1',
                                         'out0': 'out0'})
         
         smach.StateMachine.add('IMAGE_CAPTION_1',
@@ -473,7 +622,7 @@ def main():
                                                 
         smach.StateMachine.add('ADD_PERSON', # add person to list [0,X,0]
                                 AddPerson(),
-                                transitions={'out1': 'SIT_TIGHT', 
+                                transitions={'out1': 'MOVE_TO_COUCH', 
                                              'out0': 'out0'},
                                 remapping={"age":"age",
                                         "hair_color":"hair_color",
@@ -484,15 +633,29 @@ def main():
                                         'people_index':'people_index'}
                                 )
         # move to the couch 
-        # smach.StateMachine.add('TURN_TO_COUCH',
-        #                          MoveTo(),
-        #                           transitions={'out1': 'SIT_TIGHT'})
+        smach.StateMachine.add('MOVE_TO_COUCH',
+                                 GoTo(),
+                                  transitions={'out1': 'LOOK_FOR_SEATS'})
+
+        smach.StateMachine.add('LOOK_FOR_SEATS',
+                               CheckForFreeSeats(),
+                                 transitions={'out1': 'SIT_TIGHT',
+                                              'out0':'out0'})
         
+        # lets the user know which seat to sit on
         smach.StateMachine.add('SIT_TIGHT',
-                               Speak(text="Please have a seat.      I am going to introduce you to our host",
-                                     closet_person_to_track = True,),
-                            transitions = {'out1': 'INTRODUCE_HOST',
-                                            'out0':'out0'})
+                                 Speak(text="Please have a seat.    The {} seat is empty.       I am going to introduce you to our host",
+                                         closet_person_to_track = True,
+                                         keys=['free_seats']),
+                             transitions = {'out1': 'INTRODUCE_HOST',
+                                              'out0':'out0'})
+                               
+        
+        # smach.StateMachine.add('SIT_TIGHT',
+        #                        Speak(text="Please have a seat.      I am going to introduce you to our host",
+        #                              closet_person_to_track = True,),
+        #                     transitions = {'out1': 'INTRODUCE_HOST',
+        #                                     'out0':'out0'})
         
         smach.StateMachine.add('INTRODUCE_HOST',
                                IntroducePeople(people_index=0,introduce_to=1),
@@ -500,15 +663,19 @@ def main():
 
         smach.StateMachine.add('INTRODUCE_PERSON_1',
                                IntroducePeople(people_index=1,introduce_to=0),
-                               transitions = {'out1': 'GREETINGS_ASK_NAME_2'})
+                               transitions = {'out1': 'MOVE_TO_DOOR'})
         
+        smach.StateMachine.add('MOVE_TO_DOOR',
+                                 GoBack(),
+                                  transitions={'out1': 'GREETINGS_ASK_NAME_2'})
+
         #------------------------Person2-------------------------------------------
         
 
 
         # TODO add tracking to person2
         smach.StateMachine.add('GREETINGS_ASK_NAME_2',
-                            Speak(text="""Greetings, May I have your name please?"""),
+                            Speak(text="""Greetings, May I have your name please""",closet_person_to_track=True),
                             # Speak(text="Please ."),
                             transitions={'out1': 'GET_NAME_2',
                                             'out0': 'out0'})
@@ -522,13 +689,13 @@ def main():
                                     response_debug=response_debug,
                                     timeout=timeout),
                             transitions={'out1': 'SPEAK_ASK_OBJECT_2',
-                                            'out0': 'out0'},
+                                            'out0': 'GREETINGS_ASK_NAME_2'},
                             remapping={'listen_name': 'name'})
         
         smach.StateMachine.add('SPEAK_ASK_OBJECT_2',
                     Speak(text="Hello {}, What's your favorite drink?",
                         # Speak(text="Hello {}, favorite drink?",
-                            keys=["name"]),
+                            keys=["name"],closet_person_to_track=True,),
                             transitions={'out1': 'GET_OBJECT_2',
                                     'out0': 'out0'},
                             remapping={'name': 'name'})
@@ -538,12 +705,12 @@ def main():
                                         response_debug=response_debug,
                                         timeout=timeout),
                             transitions={'out1': 'SPEAK_RESPOND_OBJECT_2',
-                                            'out0': 'out0'},
+                                            'out0': 'SPEAK_ASK_OBJECT_2'},
                             remapping={'listen_object': 'favorite_drink'})
         
         smach.StateMachine.add('SPEAK_RESPOND_OBJECT_2',
-                                Speak(text="oh!, I like {} too! Can you stay still for a second so I can memorize your details?",
-                                    keys=["favorite_drink"]),
+                                Speak(text="oh!, I like {} too! Can you stay still for a second so I can memorize your details",
+                                    keys=["favorite_drink"],closet_person_to_track=True,),
                                 remapping={'favorite_drink': 'favorite_drink'},
                                 transitions={'out1': 'IMAGE_CAPTION_2',
                                             'out0': 'out0'})
@@ -566,7 +733,7 @@ def main():
 
         smach.StateMachine.add('ADD_PERSON_2',
                                 AddPerson(),
-                                transitions={'out1': 'SIT_TIGHT_2', 
+                                transitions={'out1': 'MOVE_TO_COUCH_2', 
                                              'out0': 'out0'},
                                 remapping={"age":"age",
                                         "hair_color":"hair_color",
@@ -577,13 +744,22 @@ def main():
                                         'people_index':'people_index'}
                                 )
 
-        # smach.StateMachine.add('TURN_TO_COUCH_2',
-        #                             MoveTo(),
-        #                             transitions={'out1': 'SIT_TIGHT_2'})
+        smach.StateMachine.add('MOVE_TO_COUCH_2',
+                                    GoBack(),
+                                    transitions={'out1': 'LOOK_FOR_SEATS_2'})
+        
+        smach.StateMachine.add('LOOK_FOR_SEATS_2',
+                               CheckForFreeSeats(),
+                                 transitions={'out1': 'SIT_TIGHT_2',
+                                              'out0':'out0'})
+        
             
         smach.StateMachine.add('SIT_TIGHT_2',
-                                Speak(text="Please have a seat.     I am going to introduce you to our host"),
-                                transitions = {'out1': 'INTRODUCE_HOST_2'})
+                                 Speak(text="Please have a seat.    The {} seat is empty.       I am going to introduce you to our host",
+                                         closet_person_to_track = True,
+                                         keys=['free_seats']),
+                             transitions = {'out1': 'INTRODUCE_HOST_2',
+                                              'out0':'out0'})
 
         smach.StateMachine.add('INTRODUCE_HOST_2',
                                IntroducePeople(people_index=0,introduce_to=2),
@@ -592,7 +768,6 @@ def main():
         # smach.StateMachine.add('TURN_TO_HOST_2',
         #                          MoveTo(),
         #                           transitions={'out1': 'INTRODUCE_PERSON_2'})
-        
 
         # TODO Speak to host
         smach.StateMachine.add('INTRODUCE_PERSON_2',
