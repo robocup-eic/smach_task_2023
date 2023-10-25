@@ -5,6 +5,9 @@ import signal
 import time
 import os
 import smach
+import os
+import signal
+import smach
 from ratfin import *
 import simpleaudio as sa  
 # from utils import Speak
@@ -22,6 +25,27 @@ class StopEnd(smach.State):
     def execute(self, userdata):
         userdata.stop = True
         return 'out1'
+
+class KillProcessState(smach.State):
+    """ smach.StateMachine.add('KILLPROCESS',
+                            KillProcessState(),
+                            transitions={'out1': 'out0'}
+                                        ) """
+    def __init__(self):
+        smach.State.__init__(self, outcomes=['out1'])
+
+    def execute(self, userdata):
+        pid = os.getpid()
+        try:
+            os.kill(pid, signal.SIGKILL)
+            return 'success'
+        except ProcessLookupError:
+            print(f"Process with id {pid} does not exist.")
+            return 'failure'
+        except PermissionError:
+            print(f"You don't have permission to kill process with id {pid}.")
+            return 'failure'
+
     
 class EmergencyStop():
     """ How to use
@@ -41,7 +65,7 @@ class EmergencyStop():
     def execute(self):
         print('(EmergencyStop): Listening for Walkie Freeze')
         if nlp_client.ww_listen(text="walkie_freeze", log=True):
-            wave_obj = sa.WaveObject.from_wave_file("/home/walkie/smach_task_2023/src/core_nlp/GTA5_Failed.mp3")
+            wave_obj = sa.WaveObject.from_wave_file("/home/walkie/smach_task_2023/src/core_nlp/GTA_Failed.wav")
             play_obj = wave_obj.play()
             # nlp_client.speak('fuck fuck fuck fuck fuck stopping!')
             nlp_client.speak('god damn it fuck.')

@@ -19,6 +19,27 @@ class GoGo(smach.State):
     def execute(self, ud):
         return self.follow_person()
     
+    def move_to_xyz(self, x, y): #move to position x y
+        move_base_client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
+
+        move_base_client.wait_for_server
+
+        goal = MoveBaseGoal()
+        goal.target_pose.header.frame_id = "map"
+        goal.target_pose.header.stamp = rospy.Time.now()
+        goal.target_pose.pose.position.x = x
+        goal.target_pose.pose.position.y = y
+        goal.target_pose.pose.position.z = 0
+
+        yaw = math.atan2(y, x)
+        quarternion_orientation = quaternion_from_euler(0, 0, yaw)
+        goal.target_pose.pose.orientation.x = quarternion_orientation[0]
+        goal.target_pose.pose.orientation.y = quarternion_orientation[1]
+        goal.target_pose.pose.orientation.z = quarternion_orientation[2]
+        goal.target_pose.pose.orientation.w = quarternion_orientation[3]
+
+        move_base_client.send_goal(goal)
+    
     def follow_person(self):
         move_base_client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
         

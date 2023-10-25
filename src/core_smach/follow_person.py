@@ -22,7 +22,7 @@ class Follow_Person(smach.State):
         self.timeout_seconds = timeout_seconds
         self.reached_destination = False
         self.send_goal_rate = send_goal_rate
-        smach.State.__init__(self, outcomes=['out1', 'out2'])
+        smach.State.__init__(self, outcomes=['out1', 'out0'])
 
     def execute(self, userdata):
         rospy.loginfo(('(FollowPerson) Executing following person'))

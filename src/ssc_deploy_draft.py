@@ -1,48 +1,51 @@
 
 # for developement
-
 import smach
-from nlp_client import *
+import nlp_client
 from ratfin import *
 import sys
+from cv_connector.msg import CV_type
+from cv_connector.srv import CV_srv, CV_srvRequest, CV_srvResponse
+from dy_custom.srv import SetDigitalGripper, SetDigitalGripperRequest, SetDigitalGripperResponse, SetDegreeRequest,SetDegree,SetDegreeResponse
+from core_nlp.utils import WakeWord , GetIntent
+from core_smach.follow_person import Follow_Person
+import signal
+import roslib
+import rospy
+import smach
+import smach_ros
+import nlp_client
+import threading
+from ratfin import *
+import time
+import os
+import threading
+from dy_custom.srv import SetDigitalGripper, SetDigitalGripperRequest, SetDigitalGripperResponse, SetDegreeRequest,SetDegree,SetDegreeResponse
+import openai
+
+
+
+# smach state locations
+from core_nlp.general import TellTime, TellDay
+from core_nlp.utils import WakeWord, Speak, GetEntities, GetIntent, GetName, GetObject, GetLocation
+from core_smach.follow_person import Follow_Person
+from task_gpsr_revised import GTFO, GoGo, IdleGeneral, SimGraspObjectGPSR, SimPlaceObjectGPSR, ExampleState
+
+
+
 
 
 """ 
 
-Guidelines for writing a state:
+List of State availiable for SSC later
+------------------------
+TellTime
+TellDay
+GTFO (ask him to leave)
+GetName
+SimGraspObjectGPSR 
+SimPlaceObjectGPSR
 
-Consult example_smach_state.py for an ideal state
---------------------------------------------
---MUST HAVE: 
-
-1. OUTCOME INFORMATION: Have to declear all
-    outcomes=['out1','out2','loop','undo','fail'] # out2 is optional, a good practice should have loop & undo
-
-2. INPUT/OUTPUT DATA: Have to declare all
-    input_keys=['data1', 'data2'],
-    output_keys=['data1', 'data2']
-
-2. LOGGING: EACH STEP MUST HAVE LOGGING TO ROSPY
-    rospy.loginfo('Executing state State1')
-    rospy.loginfo(f'({name of class state}}): Executing..')
-    rospy.loginfo(f'(AddPerson): {p.name} added to people_list. {p.__dict__}')
-
-3. REMAPPING: ADD TO LIST FOR CONSTRUCTOR 
-    # Will be added to the state machine by inputs and outputs
-    remappings = {'data1': 'data1', 'data2': 'data2'}  # Use actual remappings
-
-4. EXCEPTION HANDLING: return loop if exception or undo
-
-5. FIX DATATYPE: NO DYNAMIC TYPE
-    # Fix datatype to string, int, float, bool, list, dict
-    log : bool = False # have default value
-    # Raise exceptions if any entity parameter is not of type bool
-    if not isinstance(intent, bool):
-        raise ValueError("Argument 'intent' must be of type bool")
-    if None then raise exception for variable CANNOT BE NONE
-
---------------------------------------------
---OPTIONAL:  
 
 """
 

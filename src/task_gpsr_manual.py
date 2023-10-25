@@ -125,15 +125,15 @@ def main():
         #                     transitions={'out1': 'GET_INTENT',}
         #                                 )
         
-        # # Get the intent/task of the user
-        # smach.StateMachine.add('GET_INTENT',
-        #                        GetIntent(speak_debug=speak_debug,
-        #                                  response_debug=response_debug,
-        #                                  timeout=2),
-        #                        transitions={'out1': 'GET_CHATGPT_QUERY',
-        #                                     'out0': 'out0'},
-        #                        remapping={'listen_intent': 'intent',
-        #                                   'listen_text': 'stt_text'})
+        # Get the intent/task of the user
+        smach.StateMachine.add('GET_INTENT',
+                               GetIntent(speak_debug=speak_debug,
+                                         response_debug=response_debug,
+                                         timeout=2),
+                               transitions={'out1': 'GET_CHATGPT_QUERY',
+                                            'out0': 'out0'},
+                               remapping={'listen_intent': 'intent',
+                                          'listen_text': 'stt_text'})
 
         # use ChatGPT 
         smach.StateMachine.add('GET_CHATGPT_QUERY',
@@ -142,6 +142,9 @@ def main():
                                             'out0': 'out0'},
                                remapping={'prompt': 'stt_text',
                                           'chatgpt_response': 'chatgpt_response'})
+        
+        
+
 
 
         

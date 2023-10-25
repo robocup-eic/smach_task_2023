@@ -1,0 +1,9 @@
+{'ask_to_leave',
+ 'grasp_object',
+ 'what_is_your_name',
+ 'place_object',
+ 'move_to',
+ 'object_counting',
+ 'follow_people',
+ 'escort_people',
+ 'what_is_their_name'}

@@ -231,7 +231,6 @@ def main():
                                transitions={'out1':'ASK_IF_THERE_YET',
                                             'out2':'FIND_USER'})
         
-        #TODO FIND USER IF WE LOST HIM
         smach.StateMachine.add('FIND_USER',
                                  FindPerson(),
                                  transitions={'out1':'FOLLOW_USER'})

@@ -1,0 +1,371 @@
+# name : cleaning_stuff
+# defaultLocation : side_table
+# room : bedroom
+# object_name :
+#   - cloth
+#   - scrubby
+#   - sponge
+#   - cascade_pod
+
+# ---
+
+# name : containers
+# defaultLocation : end_table
+# room : living_room
+# object_name :
+#   - tray
+#   - basket
+#   - bag
+
+# ---
+
+# name : cutlery
+# defaultLocation : storage_table
+# room : kitchen
+# object_name :
+#   - fork
+#   - knife
+#   - spoon
+
+# ---
+
+# name : drinks
+# defaultLocation : counter
+# room : kitchen
+# object_name : 
+#   - chocolate_drink
+#   - coke
+#   - grape_juice
+#   - orange_juice
+#   - sprite
+
+# ---
+
+# name : food
+# defaultLocation : cupboard
+# room : kitchen
+# object_name :
+#   - cereal
+#   - noodles
+#   - sausages
+
+# ---
+
+# name : fruits
+# defaultLocation : bookcase
+# room : living room
+# object_name :
+#   - apple
+#   - orange
+#   - paprika
+
+# ---
+
+# name : snacks
+# defaultLocation : bookcase
+# room : living room
+# object_name :
+#   - pringles
+#   - crackers
+#   - potato_chips
+
+# ---
+
+# name : tableware
+# defaultLocation : storage_table
+# room : kitchen
+# object_name :
+#   - dish
+#   - bowl
+#   - cup
+
+find_person :
+  living_room :
+    pose1: 
+      position: 
+        x: 0.04954981803894043
+        y: 0.03916478157043457
+        z: 0.0
+      orientation: 
+        x: 0.0
+        y: 0.0
+        z: 0.4639238186999977
+        w: 0.885875098669565
+
+    pose2: 
+      position: 
+        x: 1.4130558967590332
+        y: 1.3112163543701172
+        z: 0.0
+      orientation: 
+        x: 0.0
+        y: 0.0
+        z: -0.41722662189327275
+        w: 0.9088024790808661
+
+    pose3: 
+      position: 
+        x: 1.3114197254180908
+        y: 1.2930266857147217
+        z: 0.0
+      orientation: 
+        x: 0.0
+        y: 0.0
+        z: 0.9331225881954321
+        w: 0.3595583894160419
+
+
+  study : 
+    pose1: 
+      position: 
+        x: 1.7986347675323486
+        y: -1.886962652206421
+        z: 0.0
+      orientation: 
+        x: 0.0
+        y: 0.0
+        z: -0.2728733075643279
+        w: 0.9620499768821283
+
+    pose2: 
+      position: 
+        x: 1.8870584964752197
+        y: -1.9761500358581543
+        z: 0.0
+      orientation: 
+        x: 0.0
+        y: 0.0
+        z: -0.9626812613755367
+        w: 0.2706377449588393
+
+
+  kitchen :
+    pose1: 
+      position: 
+        x: 4.193672180175781
+        y: 2.0418930053710938
+        z: 0.0
+      orientation: 
+        x: 0.0
+        y: 0.0
+        z: 0.26850272085845645
+        w: 0.9632789258006249
+
+    pose2: 
+      position: 
+        x: 5.767263412475586
+        y: 1.8172080516815186
+        z: 0.0
+      orientation: 
+        x: 0.0
+        y: 0.0
+        z: -0.678181176679986
+        w: 0.7348947486524513
+
+    pose3: 
+      position: 
+        x: 5.527336597442627
+        y: 1.9003934860229492
+        z: 0.0
+      orientation: 
+        x: 0.0
+        y: 0.0
+        z: 0.9310830123213923
+        w: 0.364807379539562
+
+
+  bedroom :
+    pose1: 
+      position: 
+        x: 5.702096939086914
+        y: -1.733220100402832
+        z: 0.0
+      orientation: 
+        x: 0.0
+        y: 0.0
+        z: -0.16509345935234238
+        w: 0.9862779271985541
+
+    pose2: 
+      position: 
+        x: 5.973776340484619
+        y: -1.8681873083114624
+        z: 0.0
+      orientation: 
+        x: 0.0
+        y: 0.0
+        z: -0.9657447204393238
+        w: 0.2594939978950809
+
+---
+
+find_object :
+  living_room :
+    pose1: 
+      position: 
+        x: 0.7390704154968262
+        y: 0.5296247005462646
+        z: 0.0
+      orientation: 
+        x: 0.0
+        y: 0.0
+        z: -0.7020675494661716
+        w: 0.7121103537981769
+
+    pose2: 
+      position: 
+        x: 0.21648526191711426
+        y: 2.725231885910034
+        z: 0.0
+      orientation: 
+        x: 0.0
+        y: 0.0
+        z: -0.9990686318643327
+        w: 0.04314937803410999
+
+    pose3: 
+      position: 
+        x: 2.1884803771972656
+        y: 1.4457509517669678
+        z: 0.0
+      orientation: 
+        x: 0.0
+        y: 0.0
+        z: 0.7103299615687095
+        w: 0.7038688412607818
+
+    pose4: 
+      position: 
+        x: 1.9486541748046875
+        y: -0.31812429428100586
+        z: 0.0
+      orientation: 
+        x: 0.0
+        y: 0.0
+        z: 0.05050096357723296
+        w: 0.9987240122665375
+
+
+  study :
+    pose1: 
+      position: 
+        x: 2.6838271617889404
+        y: -3.0102150440216064
+        z: 0.0
+      orientation: 
+        x: 0.0
+        y: 0.0
+        z: 0.030793035896813516
+        w: 0.9995257820287866
+
+    pose2: 
+      position: 
+        x: 3.0660648345947266
+        y: -3.0991337299346924
+        z: 0.0
+      orientation: 
+        x: 0.0
+        y: 0.0
+        z: -0.9995001752463212
+        w: 0.03161328332478757
+  
+  kitchen :
+    pose1: 
+      position: 
+        x: 4.813620567321777
+        y: 3.119080066680908
+        z: 0.0
+      orientation: 
+        x: 0.0
+        y: 0.0
+        z: 0.7155968560842365
+        w: 0.6985135213883527
+
+    pose2: 
+      position: 
+        x: 4.548829078674316
+        y: 2.842965841293335
+        z: 0.0
+      orientation: 
+        x: 0.0
+        y: 0.0
+        z: 0.06073186805708491
+        w: 0.9981541164581234
+
+    pose3: 
+      position: 
+        x: 4.82307243347168
+        y: 0.9959146976470947
+        z: 0.0
+      orientation: 
+        x: 0.0
+        y: 0.0
+        z: -0.9999815111330743
+        w: 0.006080903881266858
+
+    pose4: 
+      position: 
+        x: 6.260346412658691
+        y: 2.078291893005371
+        z: 0.0
+      orientation: 
+        x: 0.0
+        y: 0.0
+        z: 0.04730220915791883
+        w: 0.998880624003079
+
+    pose5: 
+      position: 
+        x: 6.260346412658691
+        y: 2.078291893005371
+        z: 0.0
+      orientation: 
+        x: 0.0
+        y: 0.0
+        z: 0.04730220915791883
+        w: 0.998880624003079
+
+    pose6: 
+      position: 
+        x: 6.960558891296387
+        y: 0.1433098316192627
+        z: 0.0
+      orientation: 
+        x: 0.0
+        y: 0.0
+        z: -0.2863804998084585
+        w: 0.9581159686225136
+
+  bedroom :
+    pose1: 
+      position: 
+        x: 5.05080509185791
+        y: -3.3026957511901855
+        z: 0.0
+      orientation: 
+        x: 0.0
+        y: 0.0
+        z: -0.6746046408928862
+        w: 0.7381792319523627
+
+    pose2: 
+      position: 
+        x: 7.293246746063232
+        y: -2.56022572517395
+        z: 0.0
+      orientation: 
+        x: 0.0
+        y: 0.0
+        z: -0.5919492874349167
+        w: 0.8059752112225874
+
+    pose3: 
+      position: 
+        x: 7.1326518058776855
+        y: -2.8041582107543945
+        z: 0.0
+      orientation: 
+        x: 0.0
+        y: 0.0
+        z: -0.018556898690145127
+        w: 0.999827805930103

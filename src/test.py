@@ -1,9 +1,22 @@
+x = [
+    "place_object",
+    "move_to+grasp_object+place_object",
+    "move_to+escort_people",
+    "what_is_their_name",
+    "move_to+ask_to_leave",
+    "object_counting",
+    "follow_people",
+    "what_is_your_name",
+    "move_to+follow_people",
+    "grasp_object",
 
-from cv_connector.msg import CV_type
-from cv_connector.srv import CV_srv, CV_srvRequest, CV_srvResponse
+]
 
-
-
-cv_client = rospy.ServiceProxy('/CV_connect/req_cv', CV_srv)
-req = CV_srvRequest()
-req.cv_type.type = CV_type.HumanPoseEstimation
+fuck = set()
+for i in x:
+    y = i.split("+")
+    # fuck.add(i)
+    for j in y:
+        fuck.add(j)
+    print(y)
+print(fuck)

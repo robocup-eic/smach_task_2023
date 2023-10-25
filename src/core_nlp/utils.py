@@ -592,10 +592,11 @@ class GetName(smach.State):
             min_confidence = 0.5
 
             while (self.listen_counter < self.timeout) or not self.timeout_bool:
+                
 
                 # Increment the counter
                 self.listen_counter += 1
-
+                speak("may I have your name please?")
                 # Log the execution stage
                 rospy.loginfo(f'(GetName): [{self.listen_counter}]Listening..')
 
@@ -627,6 +628,7 @@ class GetName(smach.State):
 
             # Log the name
             rospy.loginfo(f'(GetName): {name}')
+            speak(f"alright {name}")
 
             # speak the name if debug
             if self.speak_debug:
