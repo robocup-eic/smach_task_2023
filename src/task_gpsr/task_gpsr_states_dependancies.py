@@ -1,3 +1,7 @@
+# add path up one directory
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
+
 import signal
 import roslib
 import rospy
@@ -13,6 +17,7 @@ from dy_custom.srv import SetDigitalGripper, SetDigitalGripperRequest, SetDigita
 import openai
 import yaml
 
+
 from geometry_msgs.msg import Pose
 import nlp_client as nlp
 from core_nlp.emerStop import EmergencyStop
@@ -23,20 +28,20 @@ import actionlib
 from tf.transformations import euler_from_quaternion, quaternion_from_euler
 
 class SimGraspObjectGPSR(smach.State):
-    
-    """ 
+
+    """
      The robot is unable to grab the object, the robot will ask the ref to grab the object """
-    def __init__(self, 
+    def __init__(self,
                  log : bool = False,
                  timeout_tries: int = 0 # 0 means infinite tries
                  ):
-        
+
         # Raise exceptions if any entity parameter is not of type bool
         if not isinstance(log, bool):
             raise ValueError("Argument 'log' must be of type bool")
-        
+
         # Initialize the state
-        smach.State.__init__(self, 
+        smach.State.__init__(self,
                              outcomes=['out1','out0'],
                              input_keys=['data1','data2','data3'],
                              output_keys=['data1','data3'])
@@ -68,9 +73,9 @@ class SimGraspObjectGPSR(smach.State):
             print(userdata)
 
             nlp_client.speak("""I have arrived at the object to be grab, I am unable to grab the object.
-                              Could the referee grab the object and place it on my arm and say Hey Walkie for me to grab the object. 
+                              Could the referee grab the object and place it on my arm and say Hey Walkie for me to grab the object.
                              I am opening my hand now""")
-            
+
             # Opening gripper
             rospy.loginfo("(GripperControl) Opening gripper")
             self.client.call(SetDigitalGripperRequest(-1))
@@ -96,31 +101,31 @@ class SimGraspObjectGPSR(smach.State):
                 else:
                     print('Wakeword detected!')
                     break
-            
+
             # Closing gripper
             nlp_client.speak("I am closing my hand now")
             rospy.loginfo("(GripperControl) Closing gripper")
             self.client.call(SetDigitalGripperRequest(1))
-            
+
             return "out1"
         except Exception as e:
             printclr(e, "red")
             return "out0"
 
 class SimPlaceObjectGPSR(smach.State):
-    """ 
+    """
      The robot is unable to grab the object, the robot will ask the ref to grab the object """
-    def __init__(self, 
+    def __init__(self,
                  log : bool = False,
                  timeout_tries: int = 0 # 0 means infinite tries
                  ):
-        
+
         # Raise exceptions if any entity parameter is not of type bool
         if not isinstance(log, bool):
             raise ValueError("Argument 'log' must be of type bool")
-        
+
         # Initialize the state
-        smach.State.__init__(self, 
+        smach.State.__init__(self,
                              outcomes=['out1','out0'],
                              input_keys=['data1','data2','data3'],
                              output_keys=['data1','data3'])
@@ -152,37 +157,37 @@ class SimPlaceObjectGPSR(smach.State):
             print(userdata)
 
             nlp_client.speak("""I have retrived the object you have request. Letting go in 3. 2. 1.""")
-            
+
             # Opening gripper
             rospy.sleep(1)
             rospy.loginfo("(GripperControl) Opening gripper")
             self.client.call(SetDigitalGripperRequest(-1))
-            
+
             # Closing gripper
             nlp_client.speak("I am closing my hand now")
             rospy.loginfo("(GripperControl) Closing gripper")
             self.client.call(SetDigitalGripperRequest(1))
-            
+
             return "out1"
         except Exception as e:
             printclr(e, "red")
             return "out0"
 
 class ExampleState(smach.State):
-    """ 
-    TemplateVersion 1.1.0 
     """
-    def __init__(self, 
+    TemplateVersion 1.1.0
+    """
+    def __init__(self,
                  log : bool = False,
                  timeout_tries: int = 0 # 0 means infinite tries
                  ):
-        
+
         # Raise exceptions if any entity parameter is not of type bool
         if not isinstance(log, bool):
             raise ValueError("Argument 'log' must be of type bool")
-        
+
         # Initialize the state
-        smach.State.__init__(self, 
+        smach.State.__init__(self,
                              outcomes=['out1', 'out0'],
                              input_keys=['data1'],
                              output_keys=['data1'])
@@ -198,17 +203,17 @@ class ExampleState(smach.State):
 
 
 class GTFO(smach.State):
-    def __init__(self, 
+    def __init__(self,
                  log : bool = False,
                  timeout_tries: int = 0 # 0 means infinite tries
                  ):
-        
+
         # Raise exceptions if any entity parameter is not of type bool
         if not isinstance(log, bool):
             raise ValueError("Argument 'log' must be of type bool")
-        
+
         # Initialize the state
-        smach.State.__init__(self, 
+        smach.State.__init__(self,
                              outcomes=['out1','out0'],
                              input_keys=['name'],)
 
@@ -231,9 +236,9 @@ class GTFO(smach.State):
             rospy.loginfo(f'(GetTheFuckOut): Checking userdata..')
 
 
-            #TODO Find the person to track 
+            #TODO Find the person to track
             if (userdata.name != None) and (userdata.name != ""):
-                nlp_client.speak(f"""Hello I am assuming you are {userdata.name}. 
+                nlp_client.speak(f"""Hello I am assuming you are {userdata.name}.
                                  Nice to meet you the host has ask me to ask you to get the hell out of their house right now.
                                  No offense but the owner just doesn't like you. I believe you know where the door is""")
             else:
@@ -246,7 +251,7 @@ class GTFO(smach.State):
             while (self.tries_counter < self.timeout_tries) or not self.timeout_bool:
                 # Increment the counter
                 self.tries_counter += 1
-            
+
             return "out1"
         except Exception as e:
             printclr(e, "red")
@@ -254,16 +259,16 @@ class GTFO(smach.State):
 
 
 class GoGo(smach.State):
-    
+
     """ This is the move to function for the robot   """
     def __init__(self):
         smach.State.__init__(self,outcomes=['out1','out0'],input_keys=['room'])
         self.yaml_reader = read_yaml()
 
-    
+
     def execute(self, ud):
         return self.go_to_person(ud.room)
-    
+
     def go_to_person(self,room):
         rospy.loginfo("Going to places")
         pose_list = self.yaml_reader.find("find_person", room_name=room)
@@ -314,19 +319,19 @@ class read_yaml :
             pos.orientation.w = pose["orientation"]["w"]
             ret.append(pos)
         return ret
-    
+
 class GoToInstruction(smach.State):
     """ This is the move to function for the robot   """
     def __init__(self):
         smach.State.__init__(self,outcomes=['out1','out0'])
         self.yaml_reader = read_yaml()
-    
+
     def execute(self, ud):
         return self.go_to_person()
-    
+
     def go_to_person(self):
         move_base_client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
-        
+
         move_base_client.wait_for_server()
 
         goal = MoveBaseGoal()

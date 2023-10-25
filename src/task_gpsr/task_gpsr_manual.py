@@ -1,9 +1,9 @@
 # Flow of the GPSR task (General Purpose Service Robot)
 
-""" 
-Main Goal: 3 commands requedted by the operator + 1 by non-expert 
+"""
+Main Goal: 3 commands requedted by the operator + 1 by non-expert
 
-Focus: 
+Focus:
     - Task Planning
     - Object/People Detectionm
     - object Feature Recognition
@@ -40,9 +40,8 @@ import os
 import openai
 from core_smach.person import Person
 from core_nlp.utils import (WakeWord, Speak, GetIntent, GetName, GetObject, GetLocation,)
-from core_nlp.config import gpt3_5_turbo_key
 
-# Add the path to main repo folder to the environment 
+# Add the path to main repo folder to the environment
 sys.path.append('/home/walkie/Robocup-2023-NLP')
 
 # Task specific state
@@ -53,11 +52,11 @@ class ChatGPTQuery(smach.State):
                             input_keys=['prompt'],
                             output_keys=['chatgpt_response'])
         self.messages = [{
-            "role": "system", 
-            "content" : """You’re a kind helpful assistant robot, 
-                            respond back to me what my commands were but rephrase it like a assistant would 
-                            by accepting my request. don't ask a question back just do as I says. For example, 
-                            if I ask you to retrieve a coke. You should respond with something like "Certainly, grabing you a coke now" but make the sentence dynamic dont actually use the word certainly its too formal. 
+            "role": "system",
+            "content" : """You’re a kind helpful assistant robot,
+                            respond back to me what my commands were but rephrase it like a assistant would
+                            by accepting my request. don't ask a question back just do as I says. For example,
+                            if I ask you to retrieve a coke. You should respond with something like "Certainly, grabing you a coke now" but make the sentence dynamic dont actually use the word certainly its too formal.
                             This is a role-play"""}]
         openai.api_key = gpt3_5_turbo_key
 
@@ -77,7 +76,7 @@ class ChatGPTQuery(smach.State):
 
         # Append to messages
         messages.append({"role": "user", "content": prompt})
-        
+
         # packaged the messages and post request
         completion = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
@@ -97,7 +96,7 @@ class ChatGPTQuery(smach.State):
         # Save the response to userdata
         userdata.chatgpt_response = chat_response
 
-        
+
 
         return 'out1'
 
@@ -106,15 +105,15 @@ def main():
     response_debug = False
 
     rospy.init_node('smach_task_gpsr')
-    
+
     # Create a SMACH state machine
     sm = smach.StateMachine(outcomes=['out0'])
-    
+
     # Declear Variables for top-state
     sm.userdata.intent = ""
     sm.userdata.stt_text = ""
     sm.userdata.chatgpt_response = ""
-    
+
 
     with sm:
         # Navigation from the outside of the arena to the center of the arena
@@ -124,7 +123,7 @@ def main():
         #                     WakeWord(),
         #                     transitions={'out1': 'GET_INTENT',}
         #                                 )
-        
+
         # Get the intent/task of the user
         smach.StateMachine.add('GET_INTENT',
                                GetIntent(speak_debug=speak_debug,
@@ -135,19 +134,19 @@ def main():
                                remapping={'listen_intent': 'intent',
                                           'listen_text': 'stt_text'})
 
-        # use ChatGPT 
+        # use ChatGPT
         smach.StateMachine.add('GET_CHATGPT_QUERY',
                                ChatGPTQuery(),
                                transitions={'out1': 'out0',
                                             'out0': 'out0'},
                                remapping={'prompt': 'stt_text',
                                           'chatgpt_response': 'chatgpt_response'})
-        
-        
 
 
 
-        
+
+
+
 
     # Execute SMACH plan
     outcome = sm.execute()
