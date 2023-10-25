@@ -2,7 +2,9 @@ import subprocess
 import smach
 import nlp_client
 from ratfin import *
+# add path up one directory
 import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
 
 from cv_connector.msg import CV_type
 
@@ -32,7 +34,7 @@ from core_smach.follow_person import Follow_Person
 # from task_gpsr_revised import GTFO, IdleGeneral, SimGraspObjectGPSR, SimPlaceObjectGPSR, ExampleState, GoGo
 from task_gpsr_states_dependancies import GTFO, SimGraspObjectGPSR, SimPlaceObjectGPSR, GoGo, GoToInstruction
 from ssc_og import State1, State2
-""" 
+"""
 
 List of State availiable for SSC later
 ------------------------
@@ -40,7 +42,7 @@ TellTime
 TellDay
 GTFO (ask him to leave)
 GetName
-SimGraspObjectGPSR 
+SimGraspObjectGPSR
 SimPlaceObjectGPSR
 """
 class SmachGeneratorState(smach.State):
@@ -74,7 +76,7 @@ class SmachGeneratorState(smach.State):
 
     def generate_state_dict_list(self, state_sequence):
         state_dict_list = []
-        
+
         for i in range(len(state_sequence)):
             current_state = state_sequence[i]
             state_obj = self.state_mapping[current_state]()  # Instantiate the state class
@@ -85,10 +87,10 @@ class SmachGeneratorState(smach.State):
 
 
             if i == len(state_sequence) - 1:  # Last state
-                transitions = {'out1': 'KILLPROCESS', 
+                transitions = {'out1': 'KILLPROCESS',
                             'out0': state_sequence[i - 1] + "_" + str(i) if i > 0 else 'KILLPROCESS'}
             else:
-                transitions = {'out1': state_sequence[i + 1] + "_" + str(i + 2), 
+                transitions = {'out1': state_sequence[i + 1] + "_" + str(i + 2),
                             'out0': state_sequence[i - 1] + "_" + str(i) if i > 0 else state_sequence[i + 1] + "_" + str(i + 2)}
 
             state_dict_list.append({
@@ -107,12 +109,12 @@ class SmachGeneratorState(smach.State):
 
     #     with sm:
     #         for state_dict in states_dict_list:
-    #             smach.StateMachine.add(state_dict['state_name'], 
+    #             smach.StateMachine.add(state_dict['state_name'],
     #                                 state_dict['state_obj'],
     #                                 transitions=state_dict['transitions'])
 
     #     return sm
-    
+
     def execute(self, userdata):
         rospy.loginfo(f'(SmachStateGenerator): state_sequence = {userdata.state_sequence}')
         state_sequence = userdata.state_sequence
@@ -122,7 +124,7 @@ class SmachGeneratorState(smach.State):
 
         # Write to a file
         rospy.loginfo(f'(SmachStateGenerator): tryingWriting to the file..')
-        filename = "/home/walkie/smach_task_2023/src/generated_smachFUCKKKKKKKKKKKK.py"
+        filename = "temp_generated_smach_state.py"
         rospy.loginfo(f'(SmachStateGenerator): Writing to the file..')
         with open(filename, 'w') as f:
             f.write("""
@@ -193,7 +195,7 @@ with sm:
 
             # Add EmergencyStop code to the file
             f.write("""
-                    
+
     smach.StateMachine.add('BACK_START',
                             GoToInstruction(),
                             transitions={'out1': 'out0'}
@@ -202,7 +204,7 @@ with sm:
                             KillProcessState(),
                             transitions={'out1': 'out0'}
                                         )
-    
+
 # Create a thread to execute the smach container
 smach_thread = threading.Thread(target=sm.execute)
 smach_thread.start()
@@ -228,7 +230,7 @@ def main():
     # Initialize the node
     NODE_NAME = "TestSmachGenerator"
     rospy.init_node(NODE_NAME)
-    
+
     # Create a SMACH state machine
     sm = smach.StateMachine(outcomes=['out0'])
     # Declear Variables for top-state
@@ -243,11 +245,11 @@ def main():
                             transitions={'out1': 'out0',
                                         'out0': 'out0'}
                                         )
-        
-        
-        
+
+
+
     es = EmergencyStop()
-    
+
 
     # Create a thread to execute the smach container
     # Execute SMACH plan
@@ -258,7 +260,7 @@ def main():
     es_thread.start()
     es.emer_stop_handler()
 
-    
+
 if __name__ == '__main__':
     main()
 
